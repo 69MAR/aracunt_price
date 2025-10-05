@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Areca Nut Price Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Areca Nut Price Predictor</h1>
+            <p id="currentDate" class="text-gray-500 mt-2"></p>
+        </div>
+
+        <div class="mt-6 flex space-x-4">
+            <button onclick="predictPrice('adike')" id="predictAdikeButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
+                Predict Adike Price
+            </button>
+            <button onclick="predictPrice('patora')" id="predictPatoraButton" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105">
+                Predict Patora Price
+            </button>
+        </div>
+
+        <div id="result" class="mt-8 p-6 bg-gray-50 rounded-lg text-center min-h-[100px] flex items-center justify-center">
+            <p class="text-gray-500">Select a type to see the prediction.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Set the current date
+        document.getElementById('currentDate').textContent = new Date().toDateString();
+
+        async function predictPrice(arecanut_type) {
+            const adikeButton = document.getElementById('predictAdikeButton');
+            const patoraButton = document.getElementById('predictPatoraButton');
+            const resultDiv = document.getElementById('result');
+            // CORRECTED: API URL now points to the correct port 5001
+            const apiUrl = 'http://127.0.0.1:5001/predict'; 
+
+            // Disable buttons and show a loading message
+            adikeButton.disabled = true;
+            patoraButton.disabled = true;
+            const clickedButton = arecanut_type === 'adike' ? adikeButton : patoraButton;
+            clickedButton.textContent = 'Predicting...';
+            
+            resultDiv.innerHTML = '<p class="text-gray-500">Fetching prediction...</p>';
+
+            try {
+                // Send the request to the backend, including the type
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type: arecanut_type }) 
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || `API Error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Capitalize the first letter for display
+                const displayType = data.type.charAt(0).toUpperCase() + data.type.slice(1);
+                // IMPROVED: Calculate price per Kilogram
+                const pricePerKg = (data.predicted_price / 100).toFixed(2);
+
+                // IMPROVED: Display now includes both Quintal and KG prices for clarity
+                resultDiv.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-sm text-gray-600 font-medium">Predicted Price for ${displayType} Tomorrow</p>
+                        <p class="text-4xl font-bold text-indigo-700 mt-1">₹ ${data.predicted_price}</p>
+                        <p class="text-xs text-gray-500 -mt-1">(per Quintal)</p>
+                        <p class="text-lg text-gray-800 font-medium mt-3 border-t pt-2">₹ ${pricePerKg} / kg</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Prediction Error:', error);
+                resultDiv.innerHTML = `<p class="text-red-600 font-semibold">Failed to get prediction. ${error.message}</p><p class="text-xs text-gray-500 mt-2\">Is the Python backend server running?</p>`;
+            } finally {
+                // Re-enable both buttons and restore their original text
+                adikeButton.disabled = false;
+                patoraButton.disabled = false;
+                adikeButton.textContent = "Predict Adike Price";
+                patoraButton.textContent = "Predict Patora Price";
+            }
+        }
+    </script>
+</body>
+</html>
+
